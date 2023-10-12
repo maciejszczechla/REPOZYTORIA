@@ -1,0 +1,15 @@
+---
+- name: CONFT T
+  hosts: blacklan.local
+  gather_facts: false
+  connection: network_cli
+
+
+  tasks: 
+    - name: Conf t
+      ios_config:
+        lines:
+          - ntp server 194.146.251.100
+          - clock  timezone UTC 2
+        save_when: always # always, never, modified, changed
+  

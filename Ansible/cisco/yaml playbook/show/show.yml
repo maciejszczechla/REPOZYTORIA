@@ -1,0 +1,26 @@
+---
+- name: Show Commands
+  hosts: routers
+  gather_facts: false
+  connection: network_cli
+
+
+  tasks: 
+    - name: Show 
+      ios_command:
+        commands:
+          - show ip interface brief
+          - show run | sec interface Loopback0
+      register: output
+    - debug:
+        var: output.stdout_lines     
+    - name: Show2 
+      ios_command:
+        commands:
+          - show run
+          - show ip interface brief
+        match: any # defultowa jest ALL i jak jakis nie siadzie bedzie fail 
+        wait_for: 
+          - result[0]  contains interface Loopback0
+          - result[1]  contains GigabitEthernet0/3/0
+ 

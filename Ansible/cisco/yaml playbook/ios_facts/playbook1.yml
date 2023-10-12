@@ -1,0 +1,13 @@
+- name: Zbierz informacje z routerów Cisco
+  hosts: blacklan
+  gather_facts: no
+
+  tasks:
+    - name: Pobierz fakt Hostname
+      ios_facts:
+        gather_subset: all
+      register: ios_facts
+
+    - name: Wyświetl zawartość ios_facts
+      debug:
+        var: ios_facts

@@ -1,0 +1,40 @@
+---
+- name: Build IOS inventory report
+  # inventory plugin link: ln plugins/importcsv.py ~/.ansible/plugins/inventory/importcsv.py
+  hosts: routers
+  connection: network_cli
+  gather_facts: false
+
+
+  vars:
+    ansible_network_os: "cisco.ios.ios"
+    upgrade_ios_version: 16.9.6
+    filename: "isr4300-universalk9.16.09.06.SPA.bin"
+    md5: "08d876e4eca745843e8aa69a9cf1cb3e"
+
+  tasks:
+
+    - name: Gathering IOS facts
+      cisco.ios.ios_facts:
+        gather_subset: [min, hardware]
+        # gather_subset: all
+      register: facts
+      ignore_errors: true
+
+    - name: Sprawdzanie md5
+      cisco.ios.ios_command:
+        commands:
+          - "verify /md5 flash:isr4300-universalk9.16.09.06.SPA.bin"
+        wait_for:
+          - result[0] contains "08d876e4eca745843e8aa69a9cf1cb3e"
+        retries: 1
+      check_mode: false
+      ignore_errors: true
+      register: md5_result
+      vars:
+        ansible_command_timeout: 100
+
+    - debug:
+        msg:
+        - "md5 is: {{ md5_result }}" 
+

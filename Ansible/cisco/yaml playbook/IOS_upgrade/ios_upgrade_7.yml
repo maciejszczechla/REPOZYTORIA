@@ -1,0 +1,115 @@
+---
+- name: Upgrade 2901 routers
+  hosts: routers
+
+# Sprawdzenie wersji 
+  vars:
+    upgrade_ios_version: 15.7(3)M7
+
+  tasks: 
+    - name: Sprawdzanie aktualnej wersji IOS
+      ios_facts:
+
+    - debug:
+        msg:
+        - "Aktualna wersia: {{ ansible_net_version }} "  
+        - "Powinna byc taka:  15.7(3)M7"
+
+    - debug:
+        msg:
+        - "Nie masz aktulanego IOS - przechodze do upgrade "
+      when: ansible_net_version != upgrade_ios_version
+#jak zrobic zeby sie zatrzymal jak wersja jest ok 
+#Backup 
+
+- hosts: localhost
+
+  tasks:
+   - name: Data i czas backupu
+     setup: 
+       filter: "ansible_date_time"
+       gather_subset: "!all"
+   - name: Zapisywanie
+     set_fact:
+       DTG: "{{ ansible_date_time.date }}"
+   - name: Zapisz w folderze {{hostvars.localhost.DTG}}
+     file:
+      path: /katalog/backup/{{hostvars.localhost.DTG}}
+      state: directory   
+  run_once: true 
+
+- hosts: routers
+
+  tasks:
+   - name: Backup Show run 
+     ios_command:
+       commands: show run 
+     register: config
+   - name: Zapisz do 
+     copy:
+       content: "{{config.stdout[0]}}"
+       dest: "/katalog/backup/{{hostvars.localhost.DTG}}/{{ inventory_hostname }}"   
+
+# WR
+
+   - name: WR
+     ios_config:
+       save_when: always
+
+#Copy software  to target device
+
+   - name: Kopiwoanie IOS 
+     cli_command:
+       command: copy tftp://@10.1.1.222/c2900-universalk9-mz.SPA.157-3.M7.bin flash
+       prompt:
+         - c2900-universalk9-mz.SPA.157-3.M7.bin
+       answer: 
+         - "c2900-universalk9-mz.SPA.157-3.M7.bin"
+     vars: 
+       ansible_command_timeout: 250
+
+#boot 
+
+   - name: Boot system flash
+     ios_config:
+       commands:
+         - "boot system flash:c2900-universalk9-mz.SPA.157-3.M7.bin"
+       save_when: always
+
+# reload 
+
+   - name: Reload
+     cli_command:
+       command: reload
+       prompt:
+         - confirm
+       answer:
+         - 'y'
+# tu nie chce dzialac
+# Wait 
+
+   - name: Spr polaczenie
+     wait_for:
+        timeout: 300
+
+
+## Check current image
+
+   - name: Sprawdzenie obrazu 
+     ios_facts: 
+
+   - debug:
+       msg:
+       - "Current version is {{ ansible_net_version }}" 
+   - name: SPR czy versja jest ok po reload
+     vars:
+       upgrade_ios_version: 15.7(3)M7
+     assert:
+       that:
+         - upgrade_ios_version == ansible_net_version
+   - debug:
+      msg:
+      - "Software Upgrade zakonczyl sie sukcesem"     
+
+
+  

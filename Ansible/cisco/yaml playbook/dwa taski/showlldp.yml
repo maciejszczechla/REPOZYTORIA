@@ -1,0 +1,24 @@
+---
+- name: Cisco show version example
+  hosts: datacenter
+  gather_facts: false
+  connection: network_cli
+
+
+  tasks:
+    # - name: Enable LLDP
+    #   cisco.ios.ios_lldp_global:
+    #     config:
+    #       holdtime: 10
+    #       enabled: true
+    #       reinit: 3
+    #       timer: 10
+    #     state: merged
+    - name: show lldp 
+      ios_command:
+        commands: show lldp neig
+      register: output
+
+    - name: print output
+      debug:
+         var: output.stdout_lines

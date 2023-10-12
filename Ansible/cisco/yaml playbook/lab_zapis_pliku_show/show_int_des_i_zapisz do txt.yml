@@ -1,0 +1,27 @@
+---
+- name: Show Commands i ich zapis do txt
+  hosts: datacenter
+  gather_facts: false
+  connection: network_cli
+
+
+  tasks: 
+    - name: Show int des 
+      ios_command:
+        commands: "sho int des"
+      register: cli_result
+
+    - name: Print 
+      debug:
+        msg: "{{ cli_result }}"
+      
+    - name: Zapisz do folderu
+      file:
+        path: "outputs"
+        state: directory
+      run_once: true
+
+    - name: Zapisz
+      copy:
+        content: "{{ cli_result.stdout[0] }}\n"
+        dest: "outputs/{{ inventory_hostname }}.txt"

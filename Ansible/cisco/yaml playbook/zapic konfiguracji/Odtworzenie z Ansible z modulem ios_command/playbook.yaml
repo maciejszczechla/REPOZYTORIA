@@ -1,0 +1,13 @@
+- name: Wgraj konfiguracje z kopii zapasowej
+  hosts: all
+  gather_facts: false
+
+  tasks:
+  - name: Wgraj konfiguracje z urzadzenia
+    ios_command:
+      commands: 
+      - command: 'copy tftp://172.16.1.159/172.16.1.41.cfg startup-config'
+        prompt: 'Destination filename \[startup-config\]'
+        answer: "\r"
+
+

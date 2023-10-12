@@ -1,0 +1,22 @@
+- name: Robimy backup konfiguracji routera Cisco IOS XE
+  hosts: blacklan
+  gather_facts: false
+  vars:
+    date: "{{ '%Y-%m-%d-%H:%M:%S' | ansible.builtin.strftime }}"
+
+  tasks:
+    - name: Wyświetl date
+      debug:
+        msg: "{{ date }}"
+
+    - name: Pobierz konfiguracje z urzadzenia
+      ios_command:
+        commands:
+          - show running-config
+      register: config
+
+    - name: Zapisz konfiguracje w pliku w lokalnym folderze
+      local_action:
+        module: copy
+        content: "{{ config.stdout[0] }}"
+        dest: "{{ inventory_hostname }}-{{ date }}.cfg"

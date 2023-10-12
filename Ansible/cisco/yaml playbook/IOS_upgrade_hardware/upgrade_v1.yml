@@ -1,0 +1,87 @@
+---
+- name: Hadrware Upgrade
+  hosts: datacenter
+  gather_facts: false
+ 
+  vars:
+    obrazy:
+      #moedl/ i jaki obraz ma byc 
+      #ruter
+      CISCO2901/K9:
+        ios: "15.3(3)M7"
+        plik: "c2900-universalk9-mz.SPA.153-3.M6.bin"
+        md5: false
+      ISR4331/K9:
+        ios: "16.09.05"
+        plik: "isr4300-universalk9.16.09.05.SPA.bin"
+        md5: true
+        checksum: "43a2f60c13db7a45a37d49d04b4e2360"
+      #Switch
+      WS-C2960S-24PS-L: 
+        ios: "15.2(2)E9"
+        plik: "c2960s-universalk9-mz.152-2.E9.bin"
+        md5: false
+
+#zebranie factow
+  tasks:
+  - name: Zbierz Fakty
+    ios_facts:
+  - debug:
+      msg:
+      - "Aktualna ios: {{ ansible_net_version }}"  
+      - "Powinna byc taka: {{ obrazy[ansible_net_model].ios }}"
+      - "Aktualny plik: {{ ansible_net_image }}"
+  - debug:
+      msg:
+      - "Nie masz aktulanego IOS - przechodze do upgrade "
+    when: ansible_net_version != obrazy[ansible_net_model].ios
+
+#spr czy plik juz jest na flash
+  - name: spr czy ios juz jest
+    ios_command:
+      commands:
+      - "show flash: | in SPA.bin" 
+    register: czy_ios_na_flash
+  - debug:
+      var: czy_ios_na_flash
+
+  - name: Kopiwoanie IOS 
+    cli_command:
+      command: "copy tftp://10.1.1.222/{{ obrazy[ansible_net_model].plik }} flash"
+      prompt:
+        - "{{ obrazy[ansible_net_model].plik }}"
+      answer: 
+        - "{{ obrazy[ansible_net_model].plik }}"
+    vars: 
+      ansible_command_timeout: 800
+    when: 
+    - ansible_net_version != obrazy[ansible_net_model].ios
+    - czy_ios_na_flash.stdout is not search(obrazy[ansible_net_model].plik)
+
+  - name: MD5 
+    ios_command:
+      commands:
+      - "verify /md5 flash:{{ obrazy[ansible_net_model].plik }}"
+      wait_for:
+      - result[0] contains "{{ obrazy[ansible_net_model].checksum }}"
+      retries: 1
+    register: md5_result
+    vars:
+      ansible_command_timeout: 100
+    when: obrazy[ansible_net_model].md5 is true
+  - debug:
+        msg:
+        - "md5 is: {{ md5_result }}" 
+
+
+
+    
+
+
+
+      
+ 
+ 
+
+
+

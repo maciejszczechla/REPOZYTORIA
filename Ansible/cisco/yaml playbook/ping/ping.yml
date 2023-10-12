@@ -1,0 +1,6 @@
+---
+- name: Cisco Ping
+  hosts: datacenter
+  tasks:
+    - action: ping
+      

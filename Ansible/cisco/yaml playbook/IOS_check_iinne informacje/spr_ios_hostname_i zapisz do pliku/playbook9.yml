@@ -1,0 +1,27 @@
+- name: Zbierz informacje z routerów Cisco
+  hosts: blacklan
+  gather_facts: no
+
+  tasks:
+    - name: Pobierz fakt Hostname
+      ios_facts:
+        gather_subset: all
+      register: ios_hostname
+
+    - name: Pobierz fakt Wersja IOS
+      ios_facts:
+        gather_subset: all
+      register: ios_version
+
+    - name: Pobierz fakt IOS Image
+      ios_facts:
+        gather_subset: all
+      register: ios_image
+
+    - name: Twórz plik z informacjami
+      lineinfile:
+        line: |
+          Hostname: {{ ios_hostname.ansible_facts.ansible_net_hostname }}
+          Wersja IOS: {{ ios_version.ansible_facts.ansible_net_version }}
+          IOS Image: {{ ios_image.ansible_facts.ansible_net_image }}
+        path: "outputs/wynik.txt"

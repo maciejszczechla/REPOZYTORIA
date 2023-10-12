@@ -1,0 +1,33 @@
+- name: Robimy backup konfiguracji i zapisujemy ja w repozytorium GIT
+  hosts: blacklan
+  gather_facts: false
+  vars:
+    date: "{{ '%Y-%m-%d-%H:%M:%S' | ansible.builtin.strftime }}"
+    backup_folder: /home/mszczechla/playbook-ansible-git/router-config   #router-config to repo gita a plabook-ansible-git miejscie gdzie ejst plaubook 
+    commit_message: "{{ inventory_hostname }} config backup - {{ date }}"
+
+  tasks:
+    - name: Wyswietl date
+      debug:
+        msg: "{{ date }}"
+
+    - name: Pobierz konfiguracje i zapisz do pliku
+      ios_config:
+        backup: yes
+        backup_options:
+          filename: "{{ backup_folder }}/{{ inventory_hostname }}.cfg"
+
+    - name: Dodaj nowy plik do repozytorium za pomoca git add
+      shell: "git add {{ inventory_hostname }}.cfg"
+      args:
+        chdir: "{{ backup_folder }}"
+
+    - name: Zrob commit zmian
+      shell: "git commit -m \"{{ commit_message }}\""
+      args:
+        chdir: "{{ backup_folder }}"
+
+    - name: Wgraj zmiany na repozytorium
+      shell: git push 
+      args:
+        chdir: "{{ backup_folder }}"

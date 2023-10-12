@@ -1,0 +1,27 @@
+---
+- name: Show Commands
+  hosts: datacenter
+  gather_facts: false
+  connection: network_cli
+
+
+  tasks: 
+    - name: Conf t
+      ios_config:
+        lines:
+          - ip domain-name kalivpn.pl 
+    - name: Conf t with int + des
+      ios_config:
+        parents: interface loopback0  # na int loopback 
+        lines:
+          - description MGT  # dodaj komde descyptione
+        save_when: always # always, never, modified, changed
+  
+    - name: Multiple inteface 
+      ios_config:
+        parents: "{{ item }}"
+        lines:
+          - description MGT TEST  # dodaj komde descyptione
+      with_items: 
+          - interface GigabitEthernet0/1
+          - interface GigabitEthernet0/1

@@ -1,0 +1,19 @@
+---
+- name: Cisco version
+  hosts: datacenter
+  gather_facts: false
+  connection: network_cli
+
+
+  tasks: 
+    - name: Get Info
+      ios_facts:
+        gather_subset: all
+         
+    - name: Display
+      debug:
+        msg: 
+         - "Hostname: {{ ansible_net_hostname }}"
+         - "IOS: {{ ansible_net_version }}"
+         - "IMAGE: {{ ansible_net_image }}"
+        

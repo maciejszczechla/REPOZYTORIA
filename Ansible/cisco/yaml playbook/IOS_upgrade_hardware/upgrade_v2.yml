@@ -1,0 +1,130 @@
+---
+- name: Hadrware Upgrade
+  hosts: datacenter
+  gather_facts: false
+ 
+  vars:
+    obrazy:
+      #moedl/ i jaki obraz ma byc 
+      #ruter
+      CISCO2901/K9:                                     # ansible_net_model
+        ios: "15.3(3)M6"
+        plik: "c2900-universalk9-mz.SPA.153-3.M6.bin"
+        md5: false
+        boot: "boot system flash:"
+      ISR4331/K9:
+        ios: "16.09.06"
+        plik: "isr4300-universalk9.16.09.06.SPA.bin"
+        md5: true
+        checksum: "08d876e4eca745843e8aa69a9cf1cb3e"     #5  43a2f60c13db7a45a37d49d04b4e2360 6 08d876e4eca745843e8aa69a9cf1cb3e
+        boot: "boot system bootflash:"
+      #Switch
+      WS-C3750X-24:   
+        ios: "15.2(4)E9"   
+        plik: "c3750e-universalk9-mz.152-4.E9.bin"     
+        md5: true
+        checksum: "190145665030086393de15489689a1cf"   #9 190145665030086393de15489689a1cf 10 6f3b3ddec62c77747c214cc7be555ec4
+        boot: "boot system flash:"
+      WS-C2960S-24PS-L: 
+        ios: "15.2(2)E9"
+        plik: "c2960s-universalk9-mz.152-2.E9.bin"
+        md5: false        
+        boot: "boot system flash:"
+
+#zebranie factow
+  tasks:
+  - name: Zbierz Fakty
+    ios_facts:
+  - debug:
+      msg:
+      - "Aktualna ios: {{ ansible_net_version }}"  
+      - "Powinna byc taka: {{ obrazy[ansible_net_model].ios }}"
+      - "Aktualny plik: {{ ansible_net_image }}"
+  - debug:
+      msg:
+      - "Nie masz aktulanego IOS - przechodze do upgrade "
+    when: ansible_net_version != obrazy[ansible_net_model].ios
+
+
+
+  # #spr czy plik juz jest na flash
+
+
+  - name: UPgrade IOS 
+    when: ansible_net_version != obrazy[ansible_net_model].ios
+    block:  
+    - name: spr czy ios juz jest
+      ios_command:
+        commands:
+        - "dir | in bin" 
+      register: czy_ios_na_flash
+    - debug:
+        var: czy_ios_na_flash
+
+    - name: Kopiowanie IOS 
+      cli_command:
+        command: "copy tftp://10.1.1.222/{{ obrazy[ansible_net_model].plik }} flash"
+        prompt:
+          - "{{ obrazy[ansible_net_model].plik }}"
+        answer: 
+          - "{{ obrazy[ansible_net_model].plik }}"
+      vars: 
+        ansible_command_timeout: 800   #timeout rt4 800   r2900  250   sw3750   180
+      when: 
+      - ansible_net_version != obrazy[ansible_net_model].ios
+      - czy_ios_na_flash.stdout is not search(obrazy[ansible_net_model].plik)
+
+    - name: MD5 
+      ios_command:
+        commands:
+        - "verify /md5 flash:{{ obrazy[ansible_net_model].plik }}"
+        wait_for:
+        - result[0] contains "{{ obrazy[ansible_net_model].checksum }}"
+        retries: 1
+      register: md5_result
+      vars:
+        ansible_command_timeout: 100
+      when: obrazy[ansible_net_model].md5 is true
+    - debug:
+          msg:
+          - "md5 is: {{ md5_result }}" 
+
+  #W SW JEST SAMO BOOT
+    - name: Boot system flash
+      ios_config:
+        commands:
+          - "no boot system"
+          - "{{obrazy[ansible_net_model].boot}}{{obrazy[ansible_net_model].plik}}"
+        save_when: always
+  # reload 
+    - name: Reload
+      cli_command:
+        command: reload
+        prompt:
+          - confirm
+        answer:
+          - 'y'
+# Wait 
+  - name: Spr polaczenie
+    wait_for:
+      timeout: 450   # #timeout rt4 450  r2900  300   sw3750   350
+## Check current image
+  - name: Zbierz Fakty po upgrade 
+    ios_facts:
+      gather_subset: min
+  - debug:
+      msg:
+      - "Aktualna ios: {{ ansible_net_version }}"  
+      - "Powinna byc taka: {{ obrazy[ansible_net_model].ios }}"
+      - "Aktualny plik: {{ ansible_net_image }}"
+  - debug:
+      msg:
+      - "Masz Aktualny IOS- Koniec Upgrade "
+    when: ansible_net_version == obrazy[ansible_net_model].ios
+
+      
+ 
+ 
+
+
+
